@@ -1,0 +1,19 @@
+{
+  "name": "app-catalogo",
+  "version": "1.0.0",
+  "description": "Catalogo web local para clientes",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "echo \"Sin tests configurados\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "express": "^5.2.1",
+    "multer": "^2.1.1",
+    "xlsx": "^0.18.5"
+  }
+}
