@@ -39,6 +39,7 @@ function render(products) {
     node.querySelector(".code").textContent = `Cod: ${product.codigo}`;
     node.querySelector(".desc").textContent = product.descripcion || "Sin descripción";
     node.querySelector(".price").textContent = priceToText(product.precio);
+    node.querySelector(".card").dataset.product = JSON.stringify(product);
     fragment.appendChild(node);
   }
 

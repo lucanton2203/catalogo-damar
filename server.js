@@ -119,6 +119,35 @@ app.get("/admin", (_req, res) => {
   res.sendFile(path.join(__dirname, "public", "admin.html"));
 });
 
+// Lista de vendedores con sus números de WhatsApp
+const VENDORS = {
+  luciano: "+542214772539",
+  mariela: "+542214956980",
+  dolores: "+542216562908",
+  jonatan: "+542216685897",
+  mirta:   "+541133302637",
+  gaston:  "+542215736074",
+  romina:  "+542215378290"
+};
+
+// Rutas de catálogo por vendedor - sirven el mismo index.html
+app.get("/v/:vendedor", (req, res) => {
+  const name = req.params.vendedor.toLowerCase();
+  if (!VENDORS[name]) {
+    return res.status(404).send("Vendedor no encontrado");
+  }
+  res.sendFile(path.join(__dirname, "public", "index.html"));
+});
+
+// API para consultar info de un vendedor (usado por el frontend)
+app.get("/api/vendor/:nombre", (req, res) => {
+  const name = req.params.nombre.toLowerCase();
+  if (!VENDORS[name]) {
+    return res.status(404).json({ ok: false, error: "Vendedor no encontrado" });
+  }
+  return res.json({ ok: true, name, phone: VENDORS[name] });
+});
+
 // Endpoint de upload de Excel
 app.post("/admin/upload", upload.single("excel"), (req, res) => {
   const { password } = req.body || {};
