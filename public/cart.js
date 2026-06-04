@@ -301,11 +301,26 @@ document.addEventListener("DOMContentLoaded", () => {
   // Delegación en grid de productos (botón Agregar)
   document.getElementById("productsGrid")?.addEventListener("click", (e) => {
     const addBtn = e.target.closest(".btn-add-cart");
+    const qtyBtn = e.target.closest(".qty-btn-card");
+
+    if (qtyBtn) {
+      const input = qtyBtn.parentElement.querySelector(".qty-input");
+      let val = parseInt(input.value) || 1;
+      if (qtyBtn.dataset.action === "inc") val++;
+      if (qtyBtn.dataset.action === "dec" && val > 1) val--;
+      input.value = val;
+      return;
+    }
+
     if (!addBtn) return;
     const card = addBtn.closest(".card");
     if (card && card.dataset.product) {
       try {
-        addToCart(JSON.parse(card.dataset.product));
+        const product = JSON.parse(card.dataset.product);
+        const input = card.querySelector(".qty-input");
+        const qty = parseInt(input?.value) || 1;
+        for (let i = 0; i < qty; i++) addToCart(product);
+        if (input) input.value = 1;
       } catch (err) {
         console.error("Error al parsear producto:", err);
       }
