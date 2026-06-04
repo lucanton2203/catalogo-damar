@@ -109,6 +109,12 @@ function getTotalItems() {
   return cart.reduce((sum, item) => sum + item.qty, 0);
 }
 
+// Exponer para que app.js pueda leer cantidad de un producto
+window.getCartQty = function(codigo) {
+  const item = cart.find(i => i.codigo === codigo);
+  return item ? item.qty : 0;
+};
+
 // ── FORMATEADORES ─────────────────────────────────────────────────────────────
 const arsCart = new Intl.NumberFormat("es-AR", {
   style: "currency",
@@ -319,8 +325,22 @@ document.addEventListener("DOMContentLoaded", () => {
         const product = JSON.parse(card.dataset.product);
         const input = card.querySelector(".qty-input");
         const qty = parseInt(input?.value) || 1;
-        for (let i = 0; i < qty; i++) addToCart(product);
-        if (input) input.value = 1;
+        // Buscar si ya existe en el carrito
+        const existing = cart.find(i => i.codigo === product.codigo);
+        const currentQty = existing ? existing.qty : 0;
+        // Si el input muestra más que lo actual en carrito, agregar la diferencia
+        // Si es la primera vez, agregar la cantidad del input
+        if (currentQty === 0) {
+          for (let i = 0; i < qty; i++) addToCart(product);
+        } else {
+          // Setear la cantidad directamente
+          existing.qty = qty;
+          saveCart();
+          renderCart();
+        }
+        // Mostrar cantidad total en el carrito en el input
+        const updated = cart.find(i => i.codigo === product.codigo);
+        if (input && updated) input.value = updated.qty;
       } catch (err) {
         console.error("Error al parsear producto:", err);
       }

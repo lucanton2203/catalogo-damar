@@ -40,6 +40,12 @@ function render(products) {
     node.querySelector(".desc").textContent = product.descripcion || "Sin descripción";
     node.querySelector(".price").textContent = priceToText(product.precio);
     node.querySelector(".card").dataset.product = JSON.stringify(product);
+    // Mostrar cantidad del carrito si ya tiene
+    const qtyInput = node.querySelector(".qty-input");
+    if (qtyInput && window.getCartQty) {
+      const cartQty = window.getCartQty(product.codigo);
+      if (cartQty > 0) qtyInput.value = cartQty;
+    }
     fragment.appendChild(node);
   }
 
