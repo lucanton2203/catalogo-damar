@@ -134,7 +134,7 @@ function priceSubtotalText(price, qty) {
 function updateCartBadge() {
   const badge = document.getElementById("cartBadge");
   if (!badge) return;
-  const count = getTotalItems();
+  const count = cart.length;
   badge.textContent = count;
   badge.style.display = count > 0 ? "flex" : "none";
 }
