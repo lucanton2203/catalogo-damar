@@ -142,7 +142,6 @@ function renderCart() {
   if (cart.length === 0) {
     list.innerHTML = "<p class=\"cart-empty\">El carrito está vacío</p>";
     if (totalEl) totalEl.textContent = "";
-    updateCardBadges();
     return;
   }
 
@@ -173,7 +172,6 @@ function renderCart() {
   if (totalEl) {
     totalEl.textContent = "Total: " + arsCart.format(getTotal());
   }
-  updateCardBadges();
 }
 
 // ── ABRIR / CERRAR PANEL ──────────────────────────────────────────────────────
@@ -300,28 +298,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // ── ACTUALIZAR CONTADORES EN TARJETAS ──────────────────────────────────────
-function updateCardBadges() {
-  document.querySelectorAll(".card[data-product]").forEach(card => {
-    try {
-      const product = JSON.parse(card.dataset.product);
-      const item = cart.find(i => i.codigo === product.codigo);
-      let badge = card.querySelector(".cart-qty-badge");
-      if (item && item.qty > 0) {
-        if (!badge) {
-          badge = document.createElement("span");
-          badge.className = "cart-qty-badge";
-          card.style.position = "relative";
-          card.appendChild(badge);
-        }
-        badge.textContent = item.qty;
-        badge.style.display = "flex";
-      } else if (badge) {
-        badge.style.display = "none";
-      }
-    } catch(e) {}
-  });
-}
+  // Delegación en grid de productos (botón Agregar)
   document.getElementById("productsGrid")?.addEventListener("click", (e) => {
     const addBtn = e.target.closest(".btn-add-cart");
     if (!addBtn) return;
@@ -329,15 +306,9 @@ function updateCardBadges() {
     if (card && card.dataset.product) {
       try {
         addToCart(JSON.parse(card.dataset.product));
-        updateCardBadges();
       } catch (err) {
         console.error("Error al parsear producto:", err);
       }
     }
   });
-
-  // Actualizar badges al cargar (por si hay items previos en localStorage)
-  const observer = new MutationObserver(() => { updateCardBadges(); });
-  const grid = document.getElementById("productsGrid");
-  if (grid) observer.observe(grid, { childList: true });
 });
