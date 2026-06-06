@@ -248,7 +248,10 @@ function sendWhatsApp() {
   const url = "https://wa.me/" + currentVendor.phone + "?text=" + encodeURIComponent(msg);
   window.open(url, "_blank");
 
+  // Vaciar carrito después de enviar
+  clearCart();
   closeCustomerModal();
+  closeCart();
 }
 
 // ── EVENT LISTENERS ───────────────────────────────────────────────────────────
