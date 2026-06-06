@@ -157,6 +157,7 @@ function renderCart() {
     const div = document.createElement("div");
     div.className = "cart-item";
     div.innerHTML =
+      "<img class=\"cart-item-img\" src=\"/images/productos/" + item.codigo + ".jpg\" onerror=\"this.style.display='none'\" />" +
       "<div class=\"cart-item-info\">" +
         "<div class=\"cart-item-code\">Cod: " + item.codigo + "</div>" +
         "<div class=\"cart-item-desc\">" + (item.descripcion || "Sin descripción") + "</div>" +

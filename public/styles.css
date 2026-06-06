@@ -646,3 +646,19 @@ body {
   -webkit-appearance: none;
   margin: 0;
 }
+
+
+/* Imagen en item del carrito */
+.cart-item {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.cart-item-img {
+  width: 45px;
+  height: 45px;
+  object-fit: contain;
+  border-radius: 4px;
+  margin-right: 10px;
+  flex-shrink: 0;
+}
