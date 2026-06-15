@@ -148,39 +148,12 @@ app.get("/api/vendor/:nombre", (req, res) => {
   return res.json({ ok: true, name, phone: VENDORS[name] });
 });
 
-// Endpoint de upload de Excel
-app.post("/admin/upload", upload.single("excel"), (req, res) => {
-  const { password } = req.body || {};
-
-  if (password !== "damar2026") {
-    return res.status(401).json({ ok: false, error: "Contraseña incorrecta" });
-  }
-
-  if (!req.file) {
-    return res.status(400).json({ ok: false, error: "No se recibió ningún archivo" });
-  }
-
-  try {
-    // Guardar el archivo en ./data/productos.xlsx
-    fs.writeFileSync(EXCEL_PATH, req.file.buffer);
-
-    // Recargar productos
-    refreshProducts();
-
-    if (loadError) {
-      return res.status(500).json({ ok: false, error: loadError });
-    }
-
-    return res.json({
-      ok: true,
-      message: "Catálogo actualizado correctamente",
-      totalProductos: productsCache.length,
-      lastUpdate
-    });
-  } catch (error) {
-    console.error("Error procesando upload:", error.message);
-    return res.status(500).json({ ok: false, error: error.message });
-  }
+// Endpoint de upload de Excel — DESHABILITADO: el catalogo se actualiza solo desde PC via git push
+app.post("/admin/upload", (_req, res) => {
+  return res.status(403).json({
+    ok: false,
+    error: "El catalogo se actualiza exclusivamente desde la PC. Usa el acceso directo del escritorio."
+  });
 });
 
 // Endpoint para parsear el body del form en /admin/upload (multer ya lo maneja)
