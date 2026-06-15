@@ -98,6 +98,22 @@ function refreshProducts() {
 
 refreshProducts();
 
+// Detectar cambios en el Excel y recargar automaticamente
+function watchExcel() {
+  try {
+    if (fs.existsSync(EXCEL_PATH)) {
+      fs.watchFile(EXCEL_PATH, { interval: 1000 }, () => {
+        console.log("Excel modificado, recargando catalogo...");
+        refreshProducts();
+      });
+      console.log("Auto-recarga activada: cambios en el Excel se detectaran automaticamente");
+    }
+  } catch (e) {
+    console.error("No se pudo activar el watcher del Excel:", e.message);
+  }
+}
+watchExcel();
+
 app.use(express.static(path.join(__dirname, "public")));
 
 // Configurar multer para guardar en memoria y luego mover al lugar correcto
