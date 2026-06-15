@@ -99,17 +99,48 @@ function refreshProducts() {
 refreshProducts();
 
 // Detectar cambios en el Excel y recargar automaticamente
+let lastExcelSize = 0;
+let lastExcelTime = 0;
+
+function getExcelStats() {
+  try {
+    const stats = fs.statSync(EXCEL_PATH);
+    return { size: stats.size, mtime: stats.mtime.getTime() };
+  } catch (e) {
+    return null;
+  }
+}
+
+function checkExcelChanged() {
+  const stats = getExcelStats();
+  if (!stats) return false;
+  if (stats.size !== lastExcelSize || stats.mtime !== lastExcelTime) {
+    lastExcelSize = stats.size;
+    lastExcelTime = stats.mtime;
+    return true;
+  }
+  return false;
+}
+
 function watchExcel() {
   try {
-    if (fs.existsSync(EXCEL_PATH)) {
-      fs.watchFile(EXCEL_PATH, { interval: 1000 }, () => {
-        console.log("Excel modificado, recargando catalogo...");
-        refreshProducts();
-      });
-      console.log("Auto-recarga activada: cambios en el Excel se detectaran automaticamente");
+    const stats = getExcelStats();
+    if (stats) {
+      lastExcelSize = stats.size;
+      lastExcelTime = stats.mtime;
     }
+
+    // Verificar cada 2 segundos si el Excel cambio
+    setInterval(() => {
+      if (checkExcelChanged()) {
+        console.log("[WATCH] Excel modificado, recargando catalogo...");
+        refreshProducts();
+      }
+    }, 2000);
+
+    console.log("[WATCH] Auto-recarga activada (verifica cada 2 segundos)");
   } catch (e) {
-    console.error("No se pudo activar el watcher del Excel:", e.message);
+    console.error("[WATCH] No se pudo activar:", e.message);
   }
 }
 watchExcel();
@@ -177,18 +208,19 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 app.get("/api/products", (_req, res) => {
-  if (loadError) {
-    return res.status(500).json({
+  try {
+    const products = readProductsFromExcel(EXCEL_PATH);
+    res.json({
+      total: products.length,
+      lastUpdate: new Date().toISOString(),
+      products: products
+    });
+  } catch (error) {
+    res.status(500).json({
       error: "No se pudo leer el archivo Excel",
-      details: loadError
+      details: error.message
     });
   }
-
-  return res.json({
-    total: productsCache.length,
-    lastUpdate,
-    products: productsCache
-  });
 });
 
 app.get("/api/health", (_req, res) => {
