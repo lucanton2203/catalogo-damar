@@ -5,7 +5,7 @@ echo   CATALOGO DAMAR - Todo en uno
 echo ==========================================
 echo.
 
-cd /d "C:\Users\Luciano\Downloads\app catalogo"
+cd /d "%~dp0.."
 if %errorlevel% neq 0 (
     echo ERROR: No se pudo acceder a la carpeta del proyecto
     pause
@@ -31,7 +31,7 @@ echo         Cambios subidos!
 
 echo.
 echo [3/3] Iniciando servidor local...
-start cmd /k "cd /d C:\Users\Luciano\Downloads\app catalogo && node server.js"
+start cmd /k "cd /d "%~dp0.." && node server.js"
 
 timeout /t 3 /nobreak >nul
 
