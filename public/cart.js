@@ -44,6 +44,30 @@ function saveCart() {
   localStorage.setItem(CART_KEY, JSON.stringify(cart));
 }
 
+// Sincronizar precios del carrito con el servidor
+function syncCartPrices() {
+  if (cart.length === 0) return;
+  fetch("/api/products")
+    .then(r => r.json())
+    .then(data => {
+      const products = data.products || data;
+      const map = {};
+      products.forEach(p => { map[p.codigo] = p.precio; });
+      let changed = false;
+      cart.forEach(item => {
+        if (map[item.codigo] !== undefined && map[item.codigo] !== item.precio) {
+          item.precio = map[item.codigo];
+          changed = true;
+        }
+      });
+      if (changed) {
+        saveCart();
+        renderCart();
+      }
+    })
+    .catch(() => {});
+}
+
 loadCart();
 
 // ── OPERACIONES DEL CARRITO ──────────────────────────────────────────────────
@@ -186,6 +210,7 @@ function openCart() {
   document.getElementById("cartPanel")?.classList.add("open");
   document.getElementById("cartOverlay")?.classList.add("visible");
   renderCart();
+  syncCartPrices();
 }
 
 function closeCart() {
