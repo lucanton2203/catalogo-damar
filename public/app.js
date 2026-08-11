@@ -231,8 +231,8 @@ async function exportPDF() {
   const FIRST_PAGE_START_Y = HEADER_H + 5;
   const OTHER_PAGE_START_Y = 10;
   const IMG_H = 40;
-  const CELL_H = 58;
-  const ROW_GAP = 3;
+  const CELL_H = 53;
+  const ROW_GAP = 2;
   const CONTENT_BOTTOM = PAGE_H - FOOTER_H;
   const ROWS_FIRST_PAGE = Math.floor((CONTENT_BOTTOM - FIRST_PAGE_START_Y) / (CELL_H + ROW_GAP));
   const ROWS_OTHER_PAGES = Math.floor((CONTENT_BOTTOM - OTHER_PAGE_START_Y) / (CELL_H + ROW_GAP));
@@ -292,7 +292,7 @@ async function exportPDF() {
     }
 
     const cx = x + COL_W / 2;
-    const textStart = y + imgSize + 3;
+    const textStart = y + imgSize + 2;
 
     // Código en dorado
     d.setFont("helvetica", "bold");
@@ -305,7 +305,7 @@ async function exportPDF() {
     d.setFontSize(6.5);
     d.setTextColor(30, 30, 30);
     const descLines = d.splitTextToSize(product.descripcion || "Sin descripción", COL_W - 2);
-    d.text(descLines[0], cx, textStart + 4.5, { align: "center" });
+    d.text(descLines[0], cx, textStart + 4, { align: "center" });
 
     // Precio en rosa/magenta
     d.setFont("helvetica", "bold");
@@ -314,7 +314,7 @@ async function exportPDF() {
     const priceText = typeof product.precio === "number"
       ? arsFormatter.format(product.precio)
       : "Consultar";
-    d.text(priceText, cx, textStart + 9.5, { align: "center" });
+    d.text(priceText, cx, textStart + 8.5, { align: "center" });
   }
 
   // ── Generar PDF ──
