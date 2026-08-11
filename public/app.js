@@ -275,13 +275,24 @@ async function exportPDF() {
 
   // ── Celda de producto ──
   function drawCell(d, product, imgData, x, y) {
-    // Imagen cuadrada centrada (mantiene proporción)
-    const imgSize = Math.min(IMG_H, COL_W - 2); // cuadrado que cabe
+    // Imagen cuadrada centrada (mantiene proporción real, sin deformar)
+    const imgSize = Math.min(IMG_H, COL_W - 2); // caja máxima disponible
     const imgX = x + (COL_W - imgSize) / 2;
     const imgY = y;
     if (imgData) {
       try {
-        d.addImage(imgData, "JPEG", imgX, imgY, imgSize, imgSize);
+        const props = d.getImageProperties(imgData);
+        const ratio = props.width / props.height;
+        let drawW = imgSize;
+        let drawH = imgSize;
+        if (ratio >= 1) {
+          drawH = imgSize / ratio;
+        } else {
+          drawW = imgSize * ratio;
+        }
+        const offsetX = imgX + (imgSize - drawW) / 2;
+        const offsetY = imgY + (imgSize - drawH) / 2;
+        d.addImage(imgData, "JPEG", offsetX, offsetY, drawW, drawH);
       } catch(e) {
         d.setFillColor(245, 245, 245);
         d.rect(imgX, imgY, imgSize, imgSize, "F");
