@@ -10,6 +10,7 @@ const statusEl = document.getElementById("status");
 const metaInfo = document.getElementById("metaInfo");
 const cardTemplate = document.getElementById("cardTemplate");
 const exportPdfBtn = document.getElementById("exportPdfBtn");
+const brandSidebar = document.getElementById("brandSidebar");
 
 let allProducts = [];
 let currentProducts = [];
@@ -21,32 +22,107 @@ function priceToText(price) {
   return arsFormatter.format(price);
 }
 
+// Marca real asignada en la base de productos (server.js resuelve el ID contra marcas.xlsx)
+function getBrand(descripcion, product) {
+  if (product && product.marca) return product.marca;
+  return "SIN MARCA";
+}
+
+function brandSlug(brand) {
+  return "marca-" + brand.replace(/[^a-zA-Z0-9]+/g, "-");
+}
+
+function renderSidebar(products) {
+  if (!brandSidebar) return;
+  const brands = [...new Set(products.map((p) => getBrand(p.descripcion, p)))]
+    .sort((a, b) => a.localeCompare(b, "es"));
+
+  brandSidebar.innerHTML = "";
+  const fragment = document.createDocumentFragment();
+  for (const brand of brands) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "brand-link";
+    btn.textContent = brand;
+    btn.dataset.brand = brand;
+    btn.addEventListener("click", () => scrollToBrand(brand));
+    fragment.appendChild(btn);
+  }
+  brandSidebar.appendChild(fragment);
+}
+
+function setActiveBrand(brand) {
+  if (!brandSidebar) return;
+  brandSidebar.querySelectorAll(".brand-link").forEach((el) => {
+    el.classList.toggle("active", el.dataset.brand === brand);
+  });
+}
+
+function scrollToBrand(brand) {
+  // Si hay una búsqueda activa, la limpiamos para asegurar que la sección exista
+  if (searchInput.value.trim() !== "") {
+    searchInput.value = "";
+    filterProducts("");
+  }
+  const target = document.getElementById(brandSlug(brand));
+  if (target) {
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  setActiveBrand(brand);
+}
+
 function render(products) {
   currentProducts = products;
   productsGrid.innerHTML = "";
   const fragment = document.createDocumentFragment();
 
+  // Agrupar productos por marca asignada (product.marca, resuelta en el servidor)
+  const groups = new Map();
   for (const product of products) {
-    const node = cardTemplate.content.cloneNode(true);
-    const img = node.querySelector(".product-img");
-    const placeholder = node.querySelector(".img-placeholder");
-    const imgUrl = `/images/productos/${product.codigo}.jpg`;
-    img.src = imgUrl;
-    img.alt = product.descripcion || "";
-    img.onload = function() { placeholder.style.display = "none"; img.style.display = "block"; };
-    img.onerror = function() { img.style.display = "none"; placeholder.style.display = "flex"; };
-    img.style.display = "none";
-    node.querySelector(".code").textContent = `Cod: ${product.codigo}`;
-    node.querySelector(".desc").textContent = product.descripcion || "Sin descripción";
-    node.querySelector(".price").textContent = priceToText(product.precio);
-    node.querySelector(".card").dataset.product = JSON.stringify(product);
-    // Mostrar cantidad del carrito si ya tiene
-    const qtyInput = node.querySelector(".qty-input");
-    if (qtyInput && window.getCartQty) {
-      const cartQty = window.getCartQty(product.codigo);
-      if (cartQty > 0) qtyInput.value = cartQty;
+    const brand = getBrand(product.descripcion, product);
+    if (!groups.has(brand)) groups.set(brand, []);
+    groups.get(brand).push(product);
+  }
+  const sortedBrands = [...groups.keys()].sort((a, b) => a.localeCompare(b, "es"));
+
+  for (const brand of sortedBrands) {
+    const section = document.createElement("div");
+    section.className = "brand-section";
+    section.id = brandSlug(brand);
+
+    const heading = document.createElement("h3");
+    heading.className = "brand-heading";
+    heading.textContent = brand;
+    section.appendChild(heading);
+
+    const grid = document.createElement("div");
+    grid.className = "grid";
+
+    for (const product of groups.get(brand)) {
+      const node = cardTemplate.content.cloneNode(true);
+      const img = node.querySelector(".product-img");
+      const placeholder = node.querySelector(".img-placeholder");
+      const imgUrl = `/images/productos/${product.codigo}.jpg`;
+      img.src = imgUrl;
+      img.alt = product.descripcion || "";
+      img.onload = function() { placeholder.style.display = "none"; img.style.display = "block"; };
+      img.onerror = function() { img.style.display = "none"; placeholder.style.display = "flex"; };
+      img.style.display = "none";
+      node.querySelector(".code").textContent = `Cod: ${product.codigo}`;
+      node.querySelector(".desc").textContent = product.descripcion || "Sin descripción";
+      node.querySelector(".price").textContent = priceToText(product.precio);
+      node.querySelector(".card").dataset.product = JSON.stringify(product);
+      // Mostrar cantidad del carrito si ya tiene
+      const qtyInput = node.querySelector(".qty-input");
+      if (qtyInput && window.getCartQty) {
+        const cartQty = window.getCartQty(product.codigo);
+        if (cartQty > 0) qtyInput.value = cartQty;
+      }
+      grid.appendChild(node);
     }
-    fragment.appendChild(node);
+
+    section.appendChild(grid);
+    fragment.appendChild(section);
   }
 
   productsGrid.appendChild(fragment);
@@ -289,6 +365,7 @@ async function loadCatalog() {
     const data = await response.json();
     allProducts = data.products || [];
     render(allProducts);
+    renderSidebar(allProducts);
 
     const updated = data.lastUpdate ? new Date(data.lastUpdate).toLocaleString("es-AR") : "N/D";
     metaInfo.textContent = `${data.total} productos | Actualizado: ${updated}`;

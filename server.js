@@ -10,6 +10,7 @@ const IS_PRODUCTION = !!process.env.RENDER;
 
 const DATA_DIR = path.join(__dirname, "data");
 const EXCEL_PATH = path.join(DATA_DIR, "productos.xlsx");
+const MARCAS_PATH = path.join(DATA_DIR, "marcas.xlsx");
 
 // Asegurar que la carpeta data/ exista
 if (!fs.existsSync(DATA_DIR)) {
@@ -42,11 +43,34 @@ function parsePrice(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function readMarcasFromExcel(filePath) {
+  const map = new Map();
+  if (!fs.existsSync(filePath)) {
+    return map;
+  }
+  try {
+    const workbook = XLSX.readFile(filePath, { cellDates: false });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+    for (const row of rows) {
+      const id = Number(row["ID"]);
+      const nombre = normalizeValue(row["Marca"]);
+      if (Number.isFinite(id) && nombre) {
+        map.set(id, nombre);
+      }
+    }
+  } catch (error) {
+    console.error("Error leyendo marcas.xlsx:", error.message);
+  }
+  return map;
+}
+
 function readProductsFromExcel(filePath) {
   const workbook = XLSX.readFile(filePath, { cellDates: false });
   const firstSheetName = workbook.SheetNames[0];
   const sheet = workbook.Sheets[firstSheetName];
   const rows = XLSX.utils.sheet_to_json(sheet, { defval: "" });
+  const marcasMap = readMarcasFromExcel(MARCAS_PATH);
 
   const products = [];
 
@@ -59,12 +83,19 @@ function readProductsFromExcel(filePath) {
     const codBarras = normalizeValue(row["Cód.Barras U.Consumo"]);
     const descripcion = normalizeValue(row["Descripcion"]);
     const precio = parsePrice(row["Tradicional (c/Iva)"]);
+    const marcaIdRaw = row["Marca"];
+    const marcaId = marcaIdRaw === "" || marcaIdRaw === null || marcaIdRaw === undefined
+      ? null
+      : Number(marcaIdRaw);
+    const marca = Number.isFinite(marcaId) ? (marcasMap.get(marcaId) || "Sin marca") : "Sin marca";
 
     products.push({
       codigo,
       codBarras,
       descripcion,
       precio,
+      marcaId: Number.isFinite(marcaId) ? marcaId : null,
+      marca,
       updatedAt: new Date().toISOString()
     });
   }
