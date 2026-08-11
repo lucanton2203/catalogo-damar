@@ -202,6 +202,9 @@ async function exportPDF() {
   // Precargar logo como PNG (preserva transparencia)
   const logoB64 = await imgToBase64("/images/logo.png", "png");
 
+  // Precargar banner del encabezado del PDF
+  const bannerB64 = await imgToBase64("/images/pdf-banner.png", "png");
+
   // Precargar imágenes disponibles
   const imageCache = {};
   const imgPromises = currentProducts.map(async (p) => {
@@ -223,7 +226,7 @@ async function exportPDF() {
   const COLS = 4;
   const COL_GAP = 2;
   const COL_W = (CONTENT_W - (COLS - 1) * COL_GAP) / COLS;
-  const HEADER_H = 58;
+  const HEADER_H = 105;
   const FOOTER_H = 12;
   const FIRST_PAGE_START_Y = HEADER_H + 5;
   const OTHER_PAGE_START_Y = 10;
@@ -241,40 +244,18 @@ async function exportPDF() {
 
   // ── Encabezado banner ──
   function drawHeader(d) {
-    // Degradado completo: celeste RGB(0,180,255) -> violeta RGB(120,50,180)
-    const strips = 40;
-    const stripH = HEADER_H / strips;
-    for (let i = 0; i < strips; i++) {
-      const t = i / (strips - 1);
-      const r = Math.round(0   + t * 120);
-      const g = Math.round(180 - t * 130);
-      const b = Math.round(255 - t * 75);
-      d.setFillColor(r, g, b);
-      d.rect(0, i * stripH, PAGE_W, stripH + 0.3, "F");
+    if (bannerB64) {
+      // Banner de marca a página completa, respetando su proporción real (2:1)
+      d.addImage(bannerB64, "PNG", 0, 0, PAGE_W, HEADER_H);
+    } else {
+      // Fallback simple si el banner no pudo cargarse
+      d.setFillColor(214, 0, 110);
+      d.rect(0, 0, PAGE_W, HEADER_H, "F");
+      d.setFont("helvetica", "bold");
+      d.setFontSize(16);
+      d.setTextColor(255, 255, 255);
+      d.text("DISTRIBUIDORA DAMAR", PAGE_W / 2, HEADER_H / 2, { align: "center" });
     }
-
-    // Título principal centrado
-    d.setFont("helvetica", "bold");
-    d.setFontSize(18);
-    d.setTextColor(255, 255, 255);
-    d.text("CATÁLOGO GENERAL DE PRODUCTOS", PAGE_W / 2, 22, { align: "center" });
-
-    // Subtítulo
-    d.setFontSize(14);
-    d.text("DISTRIBUIDORA DAMAR", PAGE_W / 2, 32, { align: "center" });
-
-    // Datos de contacto
-    d.setFont("helvetica", "normal");
-    d.setFontSize(7.5);
-    d.setTextColor(255, 255, 255);
-    const contactY = 53;
-    const third = CONTENT_W / 3;
-    const c1 = ML + third * 0 + third / 2;
-    const c2 = ML + third * 1 + third / 2;
-    const c3 = ML + third * 2 + third / 2;
-    d.text("Tel: +54 221 543-1105", c1, contactY, { align: "center" });
-    d.text("Web: www.distribuidoradamar.com.ar", c2, contactY, { align: "center" });
-    d.text("IG: @DamarDistribuidora", c3, contactY, { align: "center" });
   }
 
   // ── Pie de página ──
