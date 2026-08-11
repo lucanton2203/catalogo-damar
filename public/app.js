@@ -23,9 +23,10 @@ function priceToText(price) {
 }
 
 // Marca real asignada en la base de productos (server.js resuelve el ID contra marcas.xlsx)
-function getBrand(descripcion, product) {
-  if (product && product.marca) return product.marca;
-  return "SIN MARCA";
+function getBrandInfo(product) {
+  const name = product && product.marca ? product.marca : "SIN MARCA";
+  const id = product && Number.isFinite(product.marcaId) ? product.marcaId : Infinity;
+  return { name, id };
 }
 
 function brandSlug(brand) {
@@ -34,17 +35,34 @@ function brandSlug(brand) {
 
 function renderSidebar(products) {
   if (!brandSidebar) return;
-  const brands = [...new Set(products.map((p) => getBrand(p.descripcion, p)))]
-    .sort((a, b) => a.localeCompare(b, "es"));
+
+  // name -> id (nos quedamos con el primer id encontrado para esa marca)
+  const brandMap = new Map();
+  for (const p of products) {
+    const info = getBrandInfo(p);
+    if (!brandMap.has(info.name)) brandMap.set(info.name, info.id);
+  }
+  // Orden por número de marca, de menor a mayor
+  const brands = [...brandMap.entries()].sort((a, b) => a[1] - b[1]);
 
   brandSidebar.innerHTML = "";
   const fragment = document.createDocumentFragment();
-  for (const brand of brands) {
+  for (const [brand, id] of brands) {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.className = "brand-link";
-    btn.textContent = brand;
     btn.dataset.brand = brand;
+
+    const num = document.createElement("span");
+    num.className = "brand-num";
+    num.textContent = Number.isFinite(id) ? id : "-";
+
+    const name = document.createElement("span");
+    name.className = "brand-name";
+    name.textContent = brand;
+
+    btn.appendChild(num);
+    btn.appendChild(name);
     btn.addEventListener("click", () => scrollToBrand(brand));
     fragment.appendChild(btn);
   }
@@ -76,29 +94,34 @@ function render(products) {
   productsGrid.innerHTML = "";
   const fragment = document.createDocumentFragment();
 
-  // Agrupar productos por marca asignada (product.marca, resuelta en el servidor)
-  const groups = new Map();
+  // Agrupar productos por marca asignada (product.marca / product.marcaId, resueltos en el servidor)
+  const groups = new Map(); // name -> { id, items: [] }
   for (const product of products) {
-    const brand = getBrand(product.descripcion, product);
-    if (!groups.has(brand)) groups.set(brand, []);
-    groups.get(brand).push(product);
+    const info = getBrandInfo(product);
+    if (!groups.has(info.name)) groups.set(info.name, { id: info.id, items: [] });
+    groups.get(info.name).items.push(product);
   }
-  const sortedBrands = [...groups.keys()].sort((a, b) => a.localeCompare(b, "es"));
+  // Orden por número de marca, de menor a mayor
+  const sortedBrands = [...groups.entries()].sort((a, b) => a[1].id - b[1].id);
 
-  for (const brand of sortedBrands) {
+  for (const [brand, data] of sortedBrands) {
     const section = document.createElement("div");
     section.className = "brand-section";
     section.id = brandSlug(brand);
 
     const heading = document.createElement("h3");
     heading.className = "brand-heading";
-    heading.textContent = brand;
+    const headingNum = document.createElement("span");
+    headingNum.className = "brand-heading-num";
+    headingNum.textContent = Number.isFinite(data.id) ? data.id : "-";
+    heading.appendChild(headingNum);
+    heading.appendChild(document.createTextNode(brand));
     section.appendChild(heading);
 
     const grid = document.createElement("div");
     grid.className = "grid";
 
-    for (const product of groups.get(brand)) {
+    for (const product of data.items) {
       const node = cardTemplate.content.cloneNode(true);
       const img = node.querySelector(".product-img");
       const placeholder = node.querySelector(".img-placeholder");
