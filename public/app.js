@@ -354,58 +354,12 @@ async function exportPDF() {
 
   // ── Generar PDF ──
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  drawHeader(doc);
-
-  let curY = FIRST_PAGE_START_Y;
-  let isFirstPage = true;
-
-  // Encabezado de sección destacado (marca o lanzamientos)
-  // Reserva espacio para el título + al menos su primera fila, para nunca dejar
-  // un encabezado "huérfano" sin productos debajo antes de un salto de página.
   const HEADING_H = 8;
-  function drawSectionHeading(title) {
-    if (curY + HEADING_H + CELL_H > CONTENT_BOTTOM) {
-      doc.addPage();
-      isFirstPage = false;
-      curY = OTHER_PAGE_START_Y;
-    }
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(214, 0, 110);
-    doc.text(title, ML, curY + 5);
-    doc.setDrawColor(214, 0, 110);
-    doc.setLineWidth(0.4);
-    doc.line(ML, curY + 6.5, PAGE_W - MR, curY + 6.5);
-    curY += HEADING_H;
-  }
-
-  // Grilla de productos (verifica espacio disponible en TODAS las filas, incluida la primera)
-  function drawGrid(products) {
-    for (let i = 0; i < products.length; i++) {
-      const col = i % COLS;
-      if (col === 0) {
-        if (i > 0) curY += CELL_H + ROW_GAP;
-        if (curY + CELL_H > CONTENT_BOTTOM) {
-          doc.addPage();
-          isFirstPage = false;
-          curY = OTHER_PAGE_START_Y;
-        }
-      }
-      const x = ML + col * (COL_W + COL_GAP);
-      drawCell(doc, products[i], imageCache[products[i].codigo] || null, x, curY);
-    }
-    curY += CELL_H + ROW_GAP;
-  }
 
   // Separar productos en lanzamiento (se muestran destacados primero, sin duplicarse abajo)
   const launchProducts = currentProducts.filter((p) => p.lanzamiento);
   const launchCodes = new Set(launchProducts.map((p) => p.codigo));
   const restProducts = currentProducts.filter((p) => !launchCodes.has(p.codigo));
-
-  if (launchProducts.length > 0) {
-    drawSectionHeading("PRODUCTOS EN LANZAMIENTO");
-    drawGrid(launchProducts);
-  }
 
   // Agrupar el resto por marca (mismo orden que el catálogo web: id ascendente)
   const groups = new Map();
@@ -416,10 +370,92 @@ async function exportPDF() {
   }
   const sortedBrands = [...groups.entries()].sort((a, b) => a[1].id - b[1].id);
 
+  // ── PASO 1: construir la secuencia de unidades (encabezados + filas) ──
+  const units = [];
+  function addHeadingUnit(title) { units.push({ type: "heading", title }); }
+  function addRowUnits(products) {
+    for (let i = 0; i < products.length; i += COLS) {
+      units.push({ type: "row", items: products.slice(i, i + COLS) });
+    }
+  }
+  if (launchProducts.length > 0) {
+    addHeadingUnit("PRODUCTOS EN LANZAMIENTO");
+    addRowUnits(launchProducts);
+  }
   for (const [brand, data] of sortedBrands) {
     const label = Number.isFinite(data.id) ? `${data.id} — ${brand}` : brand;
-    drawSectionHeading(label);
-    drawGrid(data.items);
+    addHeadingUnit(label);
+    addRowUnits(data.items);
+  }
+
+  // ── PASO 2: paginar (sin dejar encabezados huérfanos sin su primera fila) ──
+  let curY = FIRST_PAGE_START_Y;
+  let pageIndex = 0;
+  const pageStartYs = [FIRST_PAGE_START_Y];
+  for (const unit of units) {
+    if (unit.type === "heading") {
+      if (curY + HEADING_H + CELL_H > CONTENT_BOTTOM) {
+        pageIndex++;
+        pageStartYs[pageIndex] = OTHER_PAGE_START_Y;
+        curY = OTHER_PAGE_START_Y;
+      }
+      unit.page = pageIndex;
+      curY += HEADING_H;
+    } else {
+      if (curY + CELL_H > CONTENT_BOTTOM) {
+        pageIndex++;
+        pageStartYs[pageIndex] = OTHER_PAGE_START_Y;
+        curY = OTHER_PAGE_START_Y;
+      }
+      unit.page = pageIndex;
+      curY += CELL_H + ROW_GAP;
+    }
+  }
+  const totalPagesContent = pageIndex + 1;
+
+  // ── PASO 3: estirar el espaciado dentro de cada página para llenarla por completo ──
+  const MAX_EXTRA_GAP = 14; // tope de espacio extra entre filas/encabezados (mm)
+  for (let p = 0; p < totalPagesContent; p++) {
+    const pageUnits = units.filter((u) => u.page === p);
+    if (pageUnits.length === 0) continue;
+    const startY = pageStartYs[p];
+    const fixedHeight = pageUnits.reduce((sum, u) => sum + (u.type === "heading" ? HEADING_H : CELL_H), 0);
+    const available = CONTENT_BOTTOM - startY;
+    const numGaps = pageUnits.length - 1;
+    let extraGap = 0;
+    if (numGaps > 0) {
+      extraGap = Math.max(0, Math.min(MAX_EXTRA_GAP, (available - fixedHeight - numGaps * ROW_GAP) / numGaps));
+    }
+    let y = startY;
+    pageUnits.forEach((u, j) => {
+      if (j > 0) y += ROW_GAP + extraGap;
+      u.drawY = y;
+      y += (u.type === "heading" ? HEADING_H : CELL_H);
+    });
+  }
+
+  // ── PASO 4: dibujar ──
+  drawHeader(doc);
+  let currentDrawnPage = 0;
+  for (const unit of units) {
+    if (unit.page !== currentDrawnPage) {
+      doc.addPage();
+      currentDrawnPage = unit.page;
+    }
+    if (unit.type === "heading") {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.setTextColor(214, 0, 110);
+      doc.text(unit.title, ML, unit.drawY + 5);
+      doc.setDrawColor(214, 0, 110);
+      doc.setLineWidth(0.4);
+      doc.line(ML, unit.drawY + 6.5, PAGE_W - MR, unit.drawY + 6.5);
+    } else {
+      unit.items.forEach((product, col) => {
+        const x = ML + col * (COL_W + COL_GAP);
+        drawCell(doc, product, imageCache[product.codigo] || null, x, unit.drawY);
+      });
+    }
   }
 
   // Pie en todas las páginas
