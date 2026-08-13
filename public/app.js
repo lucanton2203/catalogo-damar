@@ -260,8 +260,6 @@ async function exportPDF() {
   const CELL_H = 53;
   const ROW_GAP = 2;
   const CONTENT_BOTTOM = PAGE_H - FOOTER_H;
-  const ROWS_FIRST_PAGE = Math.floor((CONTENT_BOTTOM - FIRST_PAGE_START_Y) / (CELL_H + ROW_GAP));
-  const ROWS_OTHER_PAGES = Math.floor((CONTENT_BOTTOM - OTHER_PAGE_START_Y) / (CELL_H + ROW_GAP));
 
   const today = new Date().toLocaleDateString("es-AR", {
     day: "2-digit", month: "2-digit", year: "numeric"
@@ -359,25 +357,69 @@ async function exportPDF() {
   drawHeader(doc);
 
   let curY = FIRST_PAGE_START_Y;
-  let rowsOnPage = 0;
   let isFirstPage = true;
-  const maxRowsThisPage = () => isFirstPage ? ROWS_FIRST_PAGE : ROWS_OTHER_PAGES;
 
-  for (let i = 0; i < currentProducts.length; i++) {
-    const col = i % COLS;
-    if (col === 0 && i > 0) {
-      rowsOnPage++;
-      if (rowsOnPage >= maxRowsThisPage()) {
-        doc.addPage();
-        isFirstPage = false;
-        curY = OTHER_PAGE_START_Y;
-        rowsOnPage = 0;
-      } else {
-        curY = curY + CELL_H + ROW_GAP;
-      }
+  // Encabezado de sección destacado (marca o lanzamientos)
+  const HEADING_H = 8;
+  function drawSectionHeading(title) {
+    if (curY + HEADING_H + CELL_H > CONTENT_BOTTOM) {
+      doc.addPage();
+      isFirstPage = false;
+      curY = OTHER_PAGE_START_Y;
     }
-    const x = ML + col * (COL_W + COL_GAP);
-    drawCell(doc, currentProducts[i], imageCache[currentProducts[i].codigo] || null, x, curY);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(11);
+    doc.setTextColor(214, 0, 110);
+    doc.text(title, ML, curY + 5);
+    doc.setDrawColor(214, 0, 110);
+    doc.setLineWidth(0.4);
+    doc.line(ML, curY + 6.5, PAGE_W - MR, curY + 6.5);
+    curY += HEADING_H;
+  }
+
+  // Grilla de productos (respeta paginación por espacio disponible)
+  function drawGrid(products) {
+    for (let i = 0; i < products.length; i++) {
+      const col = i % COLS;
+      if (col === 0 && i > 0) {
+        const nextY = curY + CELL_H + ROW_GAP;
+        if (nextY + CELL_H > CONTENT_BOTTOM) {
+          doc.addPage();
+          isFirstPage = false;
+          curY = OTHER_PAGE_START_Y;
+        } else {
+          curY = nextY;
+        }
+      }
+      const x = ML + col * (COL_W + COL_GAP);
+      drawCell(doc, products[i], imageCache[products[i].codigo] || null, x, curY);
+    }
+    curY += CELL_H + ROW_GAP;
+  }
+
+  // Separar productos en lanzamiento (se muestran destacados primero, sin duplicarse abajo)
+  const launchProducts = currentProducts.filter((p) => p.lanzamiento);
+  const launchCodes = new Set(launchProducts.map((p) => p.codigo));
+  const restProducts = currentProducts.filter((p) => !launchCodes.has(p.codigo));
+
+  if (launchProducts.length > 0) {
+    drawSectionHeading("PRODUCTOS EN LANZAMIENTO");
+    drawGrid(launchProducts);
+  }
+
+  // Agrupar el resto por marca (mismo orden que el catálogo web: id ascendente)
+  const groups = new Map();
+  for (const product of restProducts) {
+    const info = getBrandInfo(product);
+    if (!groups.has(info.name)) groups.set(info.name, { id: info.id, items: [] });
+    groups.get(info.name).items.push(product);
+  }
+  const sortedBrands = [...groups.entries()].sort((a, b) => a[1].id - b[1].id);
+
+  for (const [brand, data] of sortedBrands) {
+    const label = Number.isFinite(data.id) ? `${data.id} — ${brand}` : brand;
+    drawSectionHeading(label);
+    drawGrid(data.items);
   }
 
   // Pie en todas las páginas
