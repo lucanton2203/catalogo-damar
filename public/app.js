@@ -360,9 +360,10 @@ async function exportPDF() {
   let isFirstPage = true;
 
   // Encabezado de sección destacado (marca o lanzamientos)
+  // Solo reserva espacio para el título en sí; el ajuste de fila lo hace drawGrid.
   const HEADING_H = 8;
   function drawSectionHeading(title) {
-    if (curY + HEADING_H + CELL_H > CONTENT_BOTTOM) {
+    if (curY + HEADING_H > CONTENT_BOTTOM) {
       doc.addPage();
       isFirstPage = false;
       curY = OTHER_PAGE_START_Y;
@@ -377,18 +378,16 @@ async function exportPDF() {
     curY += HEADING_H;
   }
 
-  // Grilla de productos (respeta paginación por espacio disponible)
+  // Grilla de productos (verifica espacio disponible en TODAS las filas, incluida la primera)
   function drawGrid(products) {
     for (let i = 0; i < products.length; i++) {
       const col = i % COLS;
-      if (col === 0 && i > 0) {
-        const nextY = curY + CELL_H + ROW_GAP;
-        if (nextY + CELL_H > CONTENT_BOTTOM) {
+      if (col === 0) {
+        if (i > 0) curY += CELL_H + ROW_GAP;
+        if (curY + CELL_H > CONTENT_BOTTOM) {
           doc.addPage();
           isFirstPage = false;
           curY = OTHER_PAGE_START_Y;
-        } else {
-          curY = nextY;
         }
       }
       const x = ML + col * (COL_W + COL_GAP);
