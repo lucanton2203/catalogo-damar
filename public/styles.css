@@ -208,6 +208,32 @@ body {
   min-width: 0;
 }
 
+/* ── LANZAMIENTOS ── */
+.launch-section {
+  margin-bottom: 34px;
+  padding: 16px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--gold-bg) 0%, #fff 60%);
+  border: 1px solid #f0dfae;
+}
+
+.launch-heading {
+  margin: 0 0 14px;
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--brand);
+}
+
+.launch-section .card {
+  border-color: var(--gold);
+  box-shadow: 0 2px 8px rgba(184, 134, 11, 0.15);
+}
+
+.launch-section .card:hover {
+  border-color: var(--brand);
+}
+
 .brand-section {
   margin-bottom: 28px;
 }

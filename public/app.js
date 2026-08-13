@@ -89,10 +89,55 @@ function scrollToBrand(brand) {
   setActiveBrand(brand);
 }
 
+function createProductCard(product) {
+  const node = cardTemplate.content.cloneNode(true);
+  const img = node.querySelector(".product-img");
+  const placeholder = node.querySelector(".img-placeholder");
+  const imgUrl = `/images/productos/${product.codigo}.jpg`;
+  img.src = imgUrl;
+  img.alt = product.descripcion || "";
+  img.onload = function() { placeholder.style.display = "none"; img.style.display = "block"; };
+  img.onerror = function() { img.style.display = "none"; placeholder.style.display = "flex"; };
+  img.style.display = "none";
+  node.querySelector(".code").textContent = `Cod: ${product.codigo}`;
+  node.querySelector(".desc").textContent = product.descripcion || "Sin descripción";
+  node.querySelector(".price").textContent = priceToText(product.precio);
+  node.querySelector(".card").dataset.product = JSON.stringify(product);
+  // Mostrar cantidad del carrito si ya tiene
+  const qtyInput = node.querySelector(".qty-input");
+  if (qtyInput && window.getCartQty) {
+    const cartQty = window.getCartQty(product.codigo);
+    if (cartQty > 0) qtyInput.value = cartQty;
+  }
+  return node;
+}
+
 function render(products) {
   currentProducts = products;
   productsGrid.innerHTML = "";
   const fragment = document.createDocumentFragment();
+
+  // Sección de lanzamientos (solo cuando no hay búsqueda activa y hay productos marcados)
+  const isFiltered = searchInput.value.trim() !== "";
+  const launchProducts = allProducts.filter((p) => p.lanzamiento);
+  if (!isFiltered && launchProducts.length > 0) {
+    const launchSection = document.createElement("div");
+    launchSection.className = "launch-section";
+    launchSection.id = "lanzamientos";
+
+    const launchHeading = document.createElement("h3");
+    launchHeading.className = "launch-heading";
+    launchHeading.textContent = "🚀 Productos de Lanzamiento";
+    launchSection.appendChild(launchHeading);
+
+    const launchGrid = document.createElement("div");
+    launchGrid.className = "grid";
+    for (const product of launchProducts) {
+      launchGrid.appendChild(createProductCard(product));
+    }
+    launchSection.appendChild(launchGrid);
+    fragment.appendChild(launchSection);
+  }
 
   // Agrupar productos por marca asignada (product.marca / product.marcaId, resueltos en el servidor)
   const groups = new Map(); // name -> { id, items: [] }
@@ -122,26 +167,7 @@ function render(products) {
     grid.className = "grid";
 
     for (const product of data.items) {
-      const node = cardTemplate.content.cloneNode(true);
-      const img = node.querySelector(".product-img");
-      const placeholder = node.querySelector(".img-placeholder");
-      const imgUrl = `/images/productos/${product.codigo}.jpg`;
-      img.src = imgUrl;
-      img.alt = product.descripcion || "";
-      img.onload = function() { placeholder.style.display = "none"; img.style.display = "block"; };
-      img.onerror = function() { img.style.display = "none"; placeholder.style.display = "flex"; };
-      img.style.display = "none";
-      node.querySelector(".code").textContent = `Cod: ${product.codigo}`;
-      node.querySelector(".desc").textContent = product.descripcion || "Sin descripción";
-      node.querySelector(".price").textContent = priceToText(product.precio);
-      node.querySelector(".card").dataset.product = JSON.stringify(product);
-      // Mostrar cantidad del carrito si ya tiene
-      const qtyInput = node.querySelector(".qty-input");
-      if (qtyInput && window.getCartQty) {
-        const cartQty = window.getCartQty(product.codigo);
-        if (cartQty > 0) qtyInput.value = cartQty;
-      }
-      grid.appendChild(node);
+      grid.appendChild(createProductCard(product));
     }
 
     section.appendChild(grid);

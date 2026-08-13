@@ -88,6 +88,8 @@ function readProductsFromExcel(filePath) {
       ? null
       : Number(marcaIdRaw);
     const marca = Number.isFinite(marcaId) ? (marcasMap.get(marcaId) || "Sin marca") : "Sin marca";
+    const lanzamientoRaw = normalizeValue(row["Lanzamiento"]).toUpperCase();
+    const lanzamiento = ["SI", "SÍ", "X", "1", "TRUE", "YES"].includes(lanzamientoRaw);
 
     products.push({
       codigo,
@@ -96,6 +98,7 @@ function readProductsFromExcel(filePath) {
       precio,
       marcaId: Number.isFinite(marcaId) ? marcaId : null,
       marca,
+      lanzamiento,
       updatedAt: new Date().toISOString()
     });
   }
