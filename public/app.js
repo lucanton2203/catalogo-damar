@@ -360,10 +360,11 @@ async function exportPDF() {
   let isFirstPage = true;
 
   // Encabezado de sección destacado (marca o lanzamientos)
-  // Solo reserva espacio para el título en sí; el ajuste de fila lo hace drawGrid.
+  // Reserva espacio para el título + al menos su primera fila, para nunca dejar
+  // un encabezado "huérfano" sin productos debajo antes de un salto de página.
   const HEADING_H = 8;
   function drawSectionHeading(title) {
-    if (curY + HEADING_H > CONTENT_BOTTOM) {
+    if (curY + HEADING_H + CELL_H > CONTENT_BOTTOM) {
       doc.addPage();
       isFirstPage = false;
       curY = OTHER_PAGE_START_Y;
