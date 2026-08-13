@@ -179,7 +179,13 @@ function watchExcel() {
 }
 watchExcel();
 
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "public"), {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith(".js") || filePath.endsWith(".css") || filePath.endsWith(".html")) {
+      res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    }
+  }
+}));
 
 // Configurar multer para guardar en memoria y luego mover al lugar correcto
 const upload = multer({
