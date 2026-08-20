@@ -344,7 +344,7 @@ async function exportPDF() {
 
     // Precio en rosa/magenta
     d.setFont("helvetica", "bold");
-    d.setFontSize(9);
+    d.setFontSize(12);
     d.setTextColor(214, 0, 110);
     const priceText = typeof product.precio === "number"
       ? arsFormatter.format(product.precio)
